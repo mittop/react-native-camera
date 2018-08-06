@@ -6,6 +6,7 @@
 #import <React/RCTLog.h>
 #import <React/RCTUtils.h>
 #import <React/UIView+React.h>
+#import <NSData+FastHex.h>
 
 @interface RNCamera ()
 
@@ -703,9 +704,63 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             for (id barcodeType in self.barCodeTypes) {
                 if ([metadata.type isEqualToString:barcodeType]) {
                     AVMetadataMachineReadableCodeObject *transformed = (AVMetadataMachineReadableCodeObject *)[_previewLayer transformedMetadataObjectForMetadataObject:metadata];
+                    
+                    NSStringEncoding enc = CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingGB_18030_2000);
+                    
+                    NSString *decodedValue = @"";
+                    
+                    if (codeMetadata.stringValue == nil) {
+                        if (@available(iOS 11.0, *)) {
+                            CIQRCodeDescriptor *desc = (CIQRCodeDescriptor*)[codeMetadata descriptor];
+                            
+                            NSData *errorCorrectedPayload = [desc errorCorrectedPayload];
+                            
+                            NSString *errorCorrectedPayloadInHexString = [errorCorrectedPayload hexStringRepresentation];
+                            
+                            NSLog(@"Origin Data = %@", desc.errorCorrectedPayload);
+                            NSLog(@"Origin Hex = %@", errorCorrectedPayloadInHexString);
+                            
+                            NSUInteger lastInvalidHexIndex = [errorCorrectedPayloadInHexString rangeOfString:@"0EC" options:NSBackwardsSearch].location;
+                            
+                            NSString *cuttedDecodedHexstring = [errorCorrectedPayloadInHexString substringWithRange:NSMakeRange(3, lastInvalidHexIndex - 3)];
+                            
+                            NSData *cuttedDecodedData = [NSData dataWithHexString:cuttedDecodedHexstring];
+                            
+                            NSLog(@"Cutted Data = %@", cuttedDecodedData);
+                            NSLog(@"Cutted Hex = %@", cuttedDecodedHexstring);
+                            
+                            decodedValue = [[NSString alloc] initWithData:cuttedDecodedData encoding: enc];
+                            
+                            NSLog(@"Decoded Value[Exceptional] = %@", decodedValue);
+                        }
+                    } else {
+                        decodedValue = codeMetadata.stringValue;
+                        
+                        NSLog(@"Decoded Value[Original] = %@", decodedValue);
+                        
+                        NSInteger max = [codeMetadata.stringValue length];
+                        
+                        char *nbytes = malloc(max + 1);
+                        
+                        for (int i = 0; i < max; i++) {
+                            unichar ch = [codeMetadata.stringValue  characterAtIndex: i];
+                            nbytes[i] = (char) ch;
+                        }
+                        
+                        nbytes[max] = '\0';
+                        
+                        decodedValue=[NSString stringWithCString: nbytes encoding: enc];
+                        
+                        NSLog(@"Decoded Value[Original IN CN] = %@", decodedValue);
+                    }
+                    
+                    if (decodedValue == nil) {
+                        decodedValue = @"";
+                    }
+                    
                     NSDictionary *event = @{
                                             @"type" : codeMetadata.type,
-                                            @"data" : codeMetadata.stringValue,
+                                            @"data" : decodedValue,
                                             @"bounds": @{
                                                 @"origin": @{
                                                     @"x": [NSString stringWithFormat:@"%f", transformed.bounds.origin.x],
