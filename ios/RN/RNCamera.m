@@ -720,9 +720,14 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
                             NSLog(@"Origin Data = %@", desc.errorCorrectedPayload);
                             NSLog(@"Origin Hex = %@", errorCorrectedPayloadInHexString);
                             
-                            NSUInteger lastInvalidHexIndex = [errorCorrectedPayloadInHexString rangeOfString:@"0EC" options:NSBackwardsSearch].location;
+                            NSInteger lastSplitLength;
+                            if ([errorCorrectedPayloadInHexString containsString:@"0EC"]) {
+							    lastSplitLength = [errorCorrectedPayloadInHexString rangeOfString:@"0EC" options:NSBackwardsSearch].location;
+                            } else {
+							    lastSplitLength = [errorCorrectedPayloadInHexString length];
+                            }
                             
-                            NSString *cuttedDecodedHexstring = [errorCorrectedPayloadInHexString substringWithRange:NSMakeRange(3, lastInvalidHexIndex - 3)];
+                            NSString *cuttedDecodedHexstring = [errorCorrectedPayloadInHexString substringWithRange:NSMakeRange(3, lastSplitLength - 3)];
                             
                             NSData *cuttedDecodedData = [NSData dataWithHexString:cuttedDecodedHexstring];
                             
@@ -738,20 +743,20 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
                         
                         NSLog(@"Decoded Value[Original] = %@", decodedValue);
                         
-                        NSInteger max = [codeMetadata.stringValue length];
-                        
-                        char *nbytes = malloc(max + 1);
-                        
-                        for (int i = 0; i < max; i++) {
-                            unichar ch = [codeMetadata.stringValue  characterAtIndex: i];
-                            nbytes[i] = (char) ch;
-                        }
-                        
-                        nbytes[max] = '\0';
-                        
-                        decodedValue=[NSString stringWithCString: nbytes encoding: enc];
-                        
-                        NSLog(@"Decoded Value[Original IN CN] = %@", decodedValue);
+                        // NSInteger max = [codeMetadata.stringValue length];
+                        //
+                        // char *nbytes = malloc(max + 1);
+                        //
+                        // for (int i = 0; i < max; i++) {
+                        //     unichar ch = [codeMetadata.stringValue  characterAtIndex: i];
+                        //     nbytes[i] = (char) ch;
+                        // }
+                        //
+                        // nbytes[max] = '\0';
+                        //
+                        // decodedValue=[NSString stringWithCString: nbytes encoding: enc];
+                        //
+                        // NSLog(@"Decoded Value[Original IN CN] = %@", decodedValue);
                     }
                     
                     if (decodedValue == nil) {
